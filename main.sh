@@ -1,30 +1,18 @@
 #!/bin/bash
 # main.sh
 
-#Quick mode: do not download/create anything. Reuse the old stuff.
-if [ "$1" == "usecache" ]; then
-    echo "Will use old lxc images, tmp folder etc."
-	export USECACHE=true
-	export KEEPTEMPLATES=true
-fi
-
-if [ "$1" == "keep" ]; then
-    echo "Will keep downloaded templates, tmp folder etc. for later reuse"
-	export KEEPTEMPLATES=true
-fi
 
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root."
     exit 1
 fi
 
-
 NUMLEECHERS=1
 NUMSEEDERS=1
 FILESIZE=1024
 RUNDURATION=120
-LATENCYINTERVALS=50
-NUMINTERVALS=10
+LATENCYINTERVAL=50
+NUMINTERVALS=4
 
 FILENAME="test.file"
 TORRENTNAME="test.torrent"
@@ -35,40 +23,73 @@ TMPFOLDER="tmp/"
 SEEDFOLDER=$TMPFOLDER"seeder/"
 LEECHFOLDER=$TMPFOLDER"leecher/"
 
-echo "Removing possible previous folder..."
-if [[ ! $USECACHE ]]; then
+
+
+function tmpdir_clean {
+    echo "Removing old ./tmp dir"
     rm -rf $TMPFOLDER
+}
+
+function tmpdir_prepare {
 	echo "Creating temporary folder to conduct tests in..."
 	mkdir $TMPFOLDER
 	mkdir $SEEDFOLDER
 	mkdir $LEECHFOLDER
-
-	echo "Copying leecher and seeder confs"
-	cp {seeder.conf,leecher.conf} $TMPFOLDER
+	echo "Copying template conf"
+	cp template.conf $TMPFOLDER
 
 	echo "Creating random file of $FILESIZE MiB and torrent for the seeders to seed... This might take a while."
 	dd if=/dev/urandom of=$SEEDFOLDER$FILENAME bs=1M count=$FILESIZE status=progress
 	ctorrent -t -u 127.0.0.1 -s $SEEDFOLDER$TORRENTNAME $SEEDFOLDER$FILENAME
 	cp $SEEDFOLDER$TORRENTNAME $LEECHFOLDER$TORRENTNAME
+}
+
+function scripts_copy {
+    echo "Copying leecher and seeder scripts to the correct folders..."
+    cp seeder.py $SEEDFOLDER
+    cp leecher.py $LEECHFOLDER
+}
+
+function plot_draw {
+    echo "Copying data from temporary folder..."
+    cp $LEECHFOLDER$RESULTFILE $RESULTFILE
+    echo "Creating plot..."
+    python3 create_plot.py $RESULTFILE $RUNDURATION $LATENCYINTERVAL $RESULTPLOT
+}
+
+
+#Quick mode: do not download/create anything. Reuse the old stuff.
+if [ "$1" == "runcache" ]; then
+    echo "Will use old lxc images, tmp folder etc."
+    scripts_copy
+    ./containers.sh $NUMSEEDERS $RUNDURATION $LATENCYINTERVAL $NUMINTERVALS $RESULTFILE
+    plot_draw
 fi
 
-echo "Copying leecher and seeder scripts to the correct folders..."
-cp seeder.py $SEEDFOLDER
-cp leecher.py $LEECHFOLDER
-
-echo -e "\n\nRunning container.sh..."
-./containers.sh $NUMSEEDERS $RUNDURATION $LATENCYINTERVALS $NUMINTERVALS $RESULTFILE
-echo -e "Done running container.sh.\n\n"
-
-
-echo "Copying data from temporary folder..."
-cp $LEECHFOLDER$RESULTFILE $RESULTFILE
-
-echo "Removing temporary folder..."
-if [[ ! $KEEPTEMPLATES ]]; then
-    rm -rf $TMPFOLDER
+if [ "$1" == "prepare" ]; then
+    echo "Will prepare and keep downloaded templates, tmp folder etc. for later reuse"
+    tmpdir_clean
+    tmpdir_prepare
+    # When run without arguments, container.sh will just prepare the templates
+    ./containers.sh
 fi
 
-echo "Creating plot..."
-#python3 create_plot.py $RESULTFILE $RUNDURATION $LATENCYINTERVALS $RESULTPLOT
+if [ "$1" == "clean" ]; then
+    tmpdir_clean
+fi
+
+if [ "$1" == "" ]; then
+    tmpdir_clean
+    tmpdir_prepare
+    scripts_copy
+    echo -e "\n\nRunning container.sh..."
+    # Prepare templates
+    ./containers.sh
+    # Run tests
+    ./containers.sh $NUMSEEDERS $RUNDURATION $LATENCYINTERVAL $NUMINTERVALS $RESULTFILE
+    echo -e "Done running container.sh.\n\n"
+    plot_draw
+    tmpdir_clean
+fi
+
 
