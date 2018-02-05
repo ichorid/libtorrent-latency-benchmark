@@ -26,7 +26,7 @@ delays = [latencyIntervals * step for step in range(len(data))]
 lines = plt.plot(np.linspace(0, testDuration, len(data)), data)
 
 for index, line in enumerate(lines):
-    line.set_label(str(delays[index]) + "ms")
+    line.set_label('#' + str(index) + ' ' + str(delays[index]) + "ms")
 
 plt.ylabel("Download speed [kB / s]")
 plt.xlabel("Time [s]")

@@ -14,10 +14,14 @@ import libtorrent as lt
 
 def SetLatencies(latency, networkDevice='eth0'):
     # Adding latency to the network device
+    os.system('sudo tc qdisc add dev ' + networkDevice + ' root netem delay ' + str(latency) + 'ms')
+    # Commented out to produce more predictable results
+    """
     if latency == 0:
         os.system('sudo tc qdisc add dev ' + networkDevice + ' root netem delay ' + str(latency) + 'ms')
     else:
         os.system('sudo tc qdisc add dev ' + networkDevice + ' root netem delay ' + str(latency) + 'ms ' + str(int(round(latency / 2))) + 'ms distribution normal')
+    """
 
 def ClearLatencies(networkDevice='eth0'):
     # Remove latency settings and the (partially) downloaded torrent.
@@ -41,11 +45,12 @@ class LeechSpeedTest(object):
     fileName = "test.file"
 
     def Leech(self):
-        print('\nNow testing with latency', latency, '...')
 
         # Open the torrent and start downloading
         torrent = open(self.torrentFolder + self.torrentName, 'rb')
-        ses = lt.session()
+        ses = lt.session(flags=0)
+        ses.enable_incoming_tcp=0
+        ses.enable_outgoing_tcp=0
         ses.listen_on(6881, 6891)
 
         e = lt.bdecode(torrent.read())
@@ -71,20 +76,22 @@ class LeechSpeedTest(object):
         #ses.set_settings(settings)
 
         # Add the peers to the torrent
-        for ipAddress in range(self.startIP, (self.startIP + self.numIPs + 1)):
+        for ipAddress in range(self.startIP, (self.startIP + self.numIPs)):
             h.connect_peer(('10.0.3.' + str(ipAddress), 6881), 0x01)
 
         # Save data for the amount of measures into speed
-        speeds = list()
+        speeds = [0 for m in range(self.numMeasurements)]
         for i in range(self.numMeasurements):
-            sys.stdout.write('\r%.1f%%' % (100 * i / self.numMeasurements))
+            #sys.stdout.write('\r%.1f%%' % (100 * i / self.numMeasurements))
             s = h.status()
+            sys.stdout.write('\r%.1f%%' % (s.progress*100))
             #state_str = ['queued', 'checking', 'downloading metadata', 'downloading', 'finished', 'seeding', 'allocating']
-            speeds.append(s.download_rate / 1000)
+            speeds[i] = s.download_rate / 1000
             time.sleep(self.measureEvery)
             if s.is_seeding:
                 break
         sys.stdout.write('\n')
+        ses.remove_torrent(h)
         return speeds
 
     def MeasureDownloadSpeed(self):
@@ -115,10 +122,12 @@ numIntervals    = int(sys.argv[5])
 
 # Creation of both the latencies to be used and the save array for the speeds
 latencies = [latencyInterval * n for n in range(numIntervals)]
-#bws = [[0 for m in range(numMeasurements)] for l in latencies]
+#latencies = [0 for n in range(numIntervals)]
+#latencies.reverse()
 
 bws = list()
 for index, latency in enumerate(latencies):
+    print('\nNow testing with latency', latency, '...')
     SetLatencies(latency)
     r = LeechSpeedTest(args).MeasureDownloadSpeed()
     bws.append(r)

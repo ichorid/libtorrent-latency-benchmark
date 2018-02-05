@@ -7,6 +7,7 @@ DEPENDENCIES=python3-libtorrent
 PYTHONVERSION=python3
 
 LEECHERNAME="Leecher0"
+LEECHERIP=2
 CONFIGOPTIONS="-d ubuntu -r xenial -a amd64"
 CONTCONFIG="template.conf"
 
@@ -36,6 +37,10 @@ function container_template_create {
     lxc-attach -n SeederT -- apt-get update
     lxc-attach -n SeederT -- apt-get upgrade -y
     lxc-attach -n SeederT -- apt install $DEPENDENCIES -y
+    # Delete eth0 config to prevent it from being managed by ifupdown (to prevent DHCP-based problems)
+    lxc-attach -n SeederT -- ifdown eth0
+    lxc-attach -n SeederT -- sed -i '/auto eth0/d' /etc/network/interfaces
+    lxc-attach -n SeederT -- sed -i '/iface eth0 inet dhcp/d' /etc/network/interfaces
     lxc-stop -n SeederT
 }
 
@@ -49,8 +54,7 @@ function containers_cleanall {
 }
 
 function seeder_containers_names_generate {
-    seeder_container_names=()
-    for index in `seq 1 $NUMSEEDERS`
+    for index in `seq 0 $(($NUMSEEDERS-1))`
     do
         seeder_container_names+=("Seeder$index")
     done
@@ -62,22 +66,26 @@ function seeders_create {
     for container in "${seeder_container_names[@]}"
     do
         echo "Cloning and starting up $container..."
-        cp $CONTCONFIG $container.conf
         lxc-copy -e -n SeederT -N $container 
+        sleep 2
         lxc-attach -n $container -- ifconfig eth0 $SUBNET$ip/24 up
         ((ip++))
     done
     for container in "${seeder_container_names[@]}"
     do
         echo "Starting seeding..."
-        lxc-attach -n $container -- /usr/bin/$PYTHONVERSION /mnt/seeder/seeder.py &
+        # It is important to use nohup here, because if the command
+        # exits inside the container, and it has no terminal to write
+        # to, it produces a segfault.
+        lxc-attach -n $container -- nohup /usr/bin/$PYTHONVERSION /mnt/seeder/seeder.py &
     done
 }
 
 function leecher_create {
     echo "Creating and starting leecher..."
     lxc-copy -e -n SeederT -N $LEECHERNAME 
-    lxc-attach -n $LEECHERNAME -- ifconfig eth0 $SUBNET$((ip+1))/24 up &
+    sleep 2
+    lxc-attach -n $LEECHERNAME -- ifconfig eth0 $SUBNET$LEECHERIP/24 up
 }
 
 function benchmark_run {
@@ -116,9 +124,11 @@ if [[ "$#" -eq 0 ]]; then
     container_template_create
 else
     if [[ "$#" -eq 5 ]]; then
+        seeder_container_names=()
         seeder_containers_names_generate
         seeders_create
         leecher_create
+        sleep 3
         benchmark_run
         leecher_stop
         seeders_stop
@@ -127,7 +137,6 @@ else
         echo "Illegal number of arguments, give number of seeders, test durations, latencyintervals and repetitions."
         exit 1
     fi
-
 fi
 
 
