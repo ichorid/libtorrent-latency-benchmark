@@ -29,12 +29,19 @@ def ClearLatencies(networkDevice='eth0'):
 
 def WriteSpeedsToCSV(speeds, resultFolder = '/mnt/leecher/', resultName = 'result.csv'):
     # Write the speeds array to a .csv file
+    # Format of CSV:
+    # | latencyA | timestampA0 | numKbytesA0 | timestampA1 | numKbytesA1 | ...
+    # | latencyB | timestampB0 | numKbytesB0 | timestampB1 | numKbytesB1 | ...
     with open(resultFolder + resultName, 'w') as f:
-        for row in speeds:
-            for number in row[:-1]:
-                f.write(str(number))
+        for lrow in speeds:
+            latency, row = lrow
+            f.write(str(latency))
+            for record in row:
+                ts, dl = record
                 f.write(",")
-            f.write(str(row[-1]))
+                f.write(str(ts)) # Timestamp
+                f.write(",")
+                f.write(str(dl)) # Downloaded kbytes
             f.write("\n")
 
 class LeechSpeedTest(object):
@@ -79,17 +86,26 @@ class LeechSpeedTest(object):
         for ipAddress in range(self.startIP, (self.startIP + self.numIPs)):
             h.connect_peer(('10.0.3.' + str(ipAddress), 6881), 0x01)
 
+        startTime = time.time()
         # Save data for the amount of measures into speed
-        speeds = [0 for m in range(self.numMeasurements)]
+        speeds = []
         for i in range(self.numMeasurements):
             #sys.stdout.write('\r%.1f%%' % (100 * i / self.numMeasurements))
             s = h.status()
             sys.stdout.write('\r%.1f%%' % (s.progress*100))
             #state_str = ['queued', 'checking', 'downloading metadata', 'downloading', 'finished', 'seeding', 'allocating']
-            speeds[i] = s.download_rate / 1000
+            peers = h.get_peer_info()
+            sumDl = 0
+            for p in peers:
+                sumDl += p.total_download
+            speeds.append((time.time()-startTime, sumDl/1000))
             time.sleep(self.measureEvery)
             if s.is_seeding:
                 break
+
+        for i in range(self.numMeasurements - len(speeds)):
+            speeds.append((time.time()-startTime, -1))
+
         sys.stdout.write('\n')
         ses.remove_torrent(h)
         return speeds
@@ -106,9 +122,9 @@ class LeechSpeedTest(object):
 
 def checkNumArgs():
     # Give the starting IP and the number of IPs
-    numVars = 6
+    numVars = 7
     if len(sys.argv) != numVars + 1:
-        print("This script requires arguments, the starting IP, the number of IPs, testduration, latencyintervalsize, amount of repetitions and name of result file .")
+        print("This script requires arguments: the starting IP, the number of IPs, testduration, latencyintervalsize, amount of repetitions, name of result file, starting latency .")
         exit (1)
     else:
         return {'startIP' :         int(sys.argv[1]),
@@ -119,10 +135,10 @@ def checkNumArgs():
 args = checkNumArgs()
 latencyInterval = int(sys.argv[4])
 numIntervals    = int(sys.argv[5])
+startingLatency = int(sys.argv[7])
 
 # Creation of both the latencies to be used and the save array for the speeds
-latencies = [latencyInterval * n for n in range(numIntervals)]
-#latencies = [0 for n in range(numIntervals)]
+latencies = [startingLatency + latencyInterval * n for n in range(numIntervals)]
 #latencies.reverse()
 
 bws = list()
@@ -130,7 +146,7 @@ for index, latency in enumerate(latencies):
     print('\nNow testing with latency', latency, '...')
     SetLatencies(latency)
     r = LeechSpeedTest(args).MeasureDownloadSpeed()
-    bws.append(r)
+    bws.append((latency, r))
     ClearLatencies()
 
 WriteSpeedsToCSV(bws, resultName=sys.argv[6])

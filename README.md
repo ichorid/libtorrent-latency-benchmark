@@ -10,3 +10,10 @@ Make sure to have the `lxc`, `ctorrent`, `python3-numpy` and `python3-matplotlib
 
 So far, we've been able to get a consistent throughput of ~200 MB/s on a single seeder, single leecher setup. With 200 ms of latency, this decreases to ~15 MB/s for the same single seeder, single leecher setup. We've been able to increase this to ~35 MB/s by increasing the `default` and `max` parameters of the `net.ipv4.tcp_rmem` and `net.ipv4.tcp_wmem` parameters. For some graphs, see [this](https://github.com/Tribler/tribler/issues/2620) github issue.
 
+# Usage
+
+Run `main.sh` to carry the experiments automatically.
+`main.sh prepare` will download templates, generate torrent file etc., but will not run the experiments.
+`main.sh runcache` will run the experiments using the templates prepared by `main.sh prepare`.
+To change the settings (latencies, distro), edit the environment vars in `main.sh` and `containers.sh`
+Resulting plot is written to `result.png` in the working directory.

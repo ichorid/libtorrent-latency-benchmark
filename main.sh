@@ -11,6 +11,7 @@ NUMLEECHERS=1
 NUMSEEDERS=1
 FILESIZE=1024
 RUNDURATION=120
+STARTINGLATENCY=0
 LATENCYINTERVAL=50
 NUMINTERVALS=3
 
@@ -54,7 +55,7 @@ function plot_draw {
     echo "Copying data from temporary folder..."
     cp $LEECHFOLDER$RESULTFILE $RESULTFILE
     echo "Creating plot..."
-    python3 create_plot.py $RESULTFILE $RUNDURATION $LATENCYINTERVAL $RESULTPLOT
+    python3 create_plot.py $RESULTFILE $RESULTPLOT
 }
 
 
@@ -62,7 +63,7 @@ function plot_draw {
 if [ "$1" == "runcache" ]; then
     echo "Will use old lxc images, tmp folder etc."
     scripts_copy
-    ./containers.sh $NUMSEEDERS $RUNDURATION $LATENCYINTERVAL $NUMINTERVALS $RESULTFILE
+    ./containers.sh $NUMSEEDERS $RUNDURATION $LATENCYINTERVAL $NUMINTERVALS $RESULTFILE $STARTINGLATENCY
     plot_draw
 fi
 
@@ -86,7 +87,7 @@ if [ "$1" == "" ]; then
     # Prepare templates
     ./containers.sh
     # Run tests
-    ./containers.sh $NUMSEEDERS $RUNDURATION $LATENCYINTERVAL $NUMINTERVALS $RESULTFILE
+    ./containers.sh $NUMSEEDERS $RUNDURATION $LATENCYINTERVAL $NUMINTERVALS $RESULTFILE $STARTINGLATENCY
     echo -e "Done running container.sh.\n\n"
     plot_draw
     tmpdir_clean

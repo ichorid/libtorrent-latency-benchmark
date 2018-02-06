@@ -90,7 +90,7 @@ function leecher_create {
 
 function benchmark_run {
     echo -e "\nStarting the test..."
-    lxc-attach -n $LEECHERNAME -- /usr/bin/$PYTHONVERSION /mnt/leecher/leecher.py $STARTIP $NUMSEEDERS $RUNDURATION $LATENCYINTERVALS $REPETITIONS $RESULTFILE
+    lxc-attach -n $LEECHERNAME -- /usr/bin/$PYTHONVERSION /mnt/leecher/leecher.py $STARTIP $NUMSEEDERS $RUNDURATION $LATENCYINTERVALS $REPETITIONS $RESULTFILE $STARTINGLATENCY
     echo "Test is done."
 }
 
@@ -115,6 +115,7 @@ RUNDURATION=$2
 LATENCYINTERVALS=$3
 REPETITIONS=$4
 RESULTFILE=$5
+STARTINGLATENCY=$6
 
 if [[ "$#" -eq 0 ]]; then
     echo "Cleaning up and downloading/updating basic container template"
@@ -123,7 +124,7 @@ if [[ "$#" -eq 0 ]]; then
     #containers_cleanall
     container_template_create
 else
-    if [[ "$#" -eq 5 ]]; then
+    if [[ "$#" -eq 6 ]]; then
         seeder_container_names=()
         seeder_containers_names_generate
         seeders_create
@@ -132,9 +133,8 @@ else
         benchmark_run
         leecher_stop
         seeders_stop
-
     else
-        echo "Illegal number of arguments, give number of seeders, test durations, latencyintervals and repetitions."
+        echo "Illegal number of arguments, give number of seeders, test durations, latencyintervals, repetitions and startinglatency"
         exit 1
     fi
 fi
