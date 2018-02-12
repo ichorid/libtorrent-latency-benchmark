@@ -41,7 +41,7 @@ function tmpdir_prepare {
 
 	echo "Creating random file of $FILESIZE MiB and torrent for the seeders to seed... This might take a while."
 	dd if=/dev/urandom of=$SEEDFOLDER$FILENAME bs=1M count=$FILESIZE status=progress
-	ctorrent -t -u 127.0.0.1 -s $SEEDFOLDER$TORRENTNAME $SEEDFOLDER$FILENAME
+	ctorrent -t -u http://127.0.0.1 -s $SEEDFOLDER$TORRENTNAME $SEEDFOLDER$FILENAME
 	cp $SEEDFOLDER$TORRENTNAME $LEECHFOLDER$TORRENTNAME
 }
 
@@ -49,6 +49,8 @@ function scripts_copy {
     echo "Copying leecher and seeder scripts to the correct folders..."
     cp seeder.py $SEEDFOLDER
     cp leecher.py $LEECHFOLDER
+    cp leechTribler.py $LEECHFOLDER
+    cp leechLibtorrent.py $LEECHFOLDER
 }
 
 function plot_draw {

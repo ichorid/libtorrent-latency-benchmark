@@ -10,6 +10,7 @@ LEECHERNAME="Leecher0"
 LEECHERIP=2
 CONFIGOPTIONS="-d ubuntu -r xenial -a amd64"
 CONTCONFIG="template.conf"
+LEECHLIB="libtorrent"
 
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root."
@@ -90,7 +91,7 @@ function leecher_create {
 
 function benchmark_run {
     echo -e "\nStarting the test..."
-    lxc-attach -n $LEECHERNAME -- /usr/bin/$PYTHONVERSION /mnt/leecher/leecher.py $STARTIP $NUMSEEDERS $RUNDURATION $LATENCYINTERVALS $REPETITIONS $RESULTFILE $STARTINGLATENCY
+    lxc-attach -n $LEECHERNAME -- /usr/bin/$PYTHONVERSION /mnt/leecher/leecher.py $STARTIP $NUMSEEDERS $RUNDURATION $LATENCYINTERVALS $REPETITIONS $RESULTFILE $STARTINGLATENCY $LEECHLIB
     echo "Test is done."
 }
 
