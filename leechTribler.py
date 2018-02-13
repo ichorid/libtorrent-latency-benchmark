@@ -10,6 +10,7 @@ from twisted.internet.task import deferLater
 from twisted.internet import reactor
 from twisted.python import log
 
+from Tribler.Core.Libtorrent.LibtorrentMgr import LibtorrentMgr
 from Tribler.Core.SessionConfig import SessionStartupConfig
 from Tribler.Core.Session import Session
 from Tribler.Core.DownloadConfig import DownloadStartupConfig 
@@ -31,7 +32,7 @@ class LeechLib(LeechSpeedTest):
     @blocking_call_on_reactor_thread
     @inlineCallbacks
     def TestLantencies(self):
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.DEBUG)
         
         # Redirect twisted log to standard python logging
         observer = log.PythonLoggingObserver()
@@ -61,12 +62,15 @@ class LeechLib(LeechSpeedTest):
         session = Session(config)
         yield session.start()
 
+        #ltmgr = LibtorrentMgr(session)
+        session.lm.ltmgr.set_alert_mask=0xffffffff
         self.speeds = list()
         self.bws = list()
         for index, latency in enumerate(self.latencies):
             print '\nNow testing with latency', latency, '...'
             self.SetLatencies(latency)
             yield self.LeechTwisted(session)
+            time.sleep (10)
             self.bws.append((latency, self.speeds))
             self.ClearLatencies()
         print 'EEEEEEEEEEEEEEEE'
@@ -104,7 +108,8 @@ class LeechLib(LeechSpeedTest):
             sys.stdout.flush()
             self.speeds.append((time.time()-startTime, sumDl/1000))
 
-            if(ds.get_status() == DLSTATUS_SEEDING):
+            if(ds.get_status() == DLSTATUS_SEEDING or
+                    self.numMeasurements == len(self.speeds)):
                 for i in range(self.numMeasurements - len(self.speeds)):
                     self.speeds.append((time.time()-startTime, -1))
                 print "\nDL COMPLETE"
@@ -114,7 +119,7 @@ class LeechLib(LeechSpeedTest):
                 session.remove_download(ds.get_download(), True, True).addCallback(tr)
                 print "\nDL COMPLETE2"
                 return 0.0, False
-            return 0.4, False
+            return 0.1, False
 
         d = Deferred()
         download.set_state_callback(printSpeed)
