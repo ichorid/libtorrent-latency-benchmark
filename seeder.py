@@ -15,7 +15,7 @@ torrentName = 'test.torrent'
 torrent = open(torrentFolder + torrentName, 'rb')
 
 # Start a libtorrent session
-ses = lt.session(flags=0)
+ses = lt.session()
 ses.enable_incoming_tcp=0
 ses.enable_outgoing_tcp=0
 

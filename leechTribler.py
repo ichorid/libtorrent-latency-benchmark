@@ -21,17 +21,16 @@ from Tribler.dispersy.util import blocking_call_on_reactor_thread
 from leecher import LeechSpeedTest
 
 class LeechLib(LeechSpeedTest):
-    def Leech(self):
-        self.latencies = [self.startingLatency + self.latencyInterval *
-                n for n in range(self.numIntervals)]
+    def TestLantencies(self):
         os.system('rm -rf .tribler')
-        reactor.callWhenRunning(self.TestLantencies)
+        self.bws = list()
+        reactor.callWhenRunning(self.TestLantenciesTwisted)
         reactor.run()
         return self.bws
 
     @blocking_call_on_reactor_thread
     @inlineCallbacks
-    def TestLantencies(self):
+    def TestLantenciesTwisted(self):
         logging.basicConfig(level=logging.DEBUG)
         
         # Redirect twisted log to standard python logging
@@ -62,18 +61,18 @@ class LeechLib(LeechSpeedTest):
         session = Session(config)
         yield session.start()
 
-        #ltmgr = LibtorrentMgr(session)
         session.lm.ltmgr.set_alert_mask=0xffffffff
         self.speeds = list()
-        self.bws = list()
         for index, latency in enumerate(self.latencies):
             print '\nNow testing with latency', latency, '...'
             self.SetLatencies(latency)
             yield self.LeechTwisted(session)
+            # workaround for remove_download race condition
             time.sleep (10)
+            os.system('rm -rf download')
             self.bws.append((latency, self.speeds))
             self.ClearLatencies()
-        print 'EEEEEEEEEEEEEEEE'
+        print 'Tests complete'
         df = session.shutdown()
         reactor.stop()
         #df.addCallback(lambda x: reactor.stop())
@@ -84,12 +83,11 @@ class LeechLib(LeechSpeedTest):
     #@blocking_call_on_reactor_thread
     @inlineCallbacks
     def LeechTwisted(self, session):
-        #os.system('rm -rf download')
         dcfg = DownloadStartupConfig()
         dcfg.set_dest_dir(os.path.join(os.getcwd(), 'download'))
         dcfg.set_hops(0)
         
-        tdef = TorrentDef.load(self.torrentName)
+        tdef = TorrentDef.load(self.torrentFolder + self.torrentName)
         print "\n DL START"
         download = yield session.start_download_from_tdef(tdef, dcfg=dcfg)
             

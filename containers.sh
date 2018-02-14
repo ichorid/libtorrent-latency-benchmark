@@ -4,12 +4,13 @@ STARTIP=3
 SUBNET=10.0.3.
 DEPENDENCIES=python3-libtorrent
 
-PYTHONVERSION=python3
+PYTHONVERSION=python
 
 LEECHERNAME="Leecher0"
 LEECHERIP=2
 CONFIGOPTIONS="-d ubuntu -r xenial -a amd64"
 CONTCONFIG="template.conf"
+#LEECHLIB="tribler"
 LEECHLIB="libtorrent"
 
 if [[ $EUID -ne 0 ]]; then
@@ -37,7 +38,9 @@ function container_template_create {
     sleep 5
     lxc-attach -n SeederT -- apt-get update
     lxc-attach -n SeederT -- apt-get upgrade -y
-    lxc-attach -n SeederT -- apt install $DEPENDENCIES -y
+    lxc-attach -n SeederT -- /mnt/get_libtorrent.sh
+    lxc-attach -n SeederT -- /mnt/get_tribler.sh
+    #lxc-attach -n SeederT -- apt install $DEPENDENCIES -y
     # Delete eth0 config to prevent it from being managed by ifupdown (to prevent DHCP-based problems)
     lxc-attach -n SeederT -- ifdown eth0
     lxc-attach -n SeederT -- sed -i '/auto eth0/d' /etc/network/interfaces
@@ -91,7 +94,7 @@ function leecher_create {
 
 function benchmark_run {
     echo -e "\nStarting the test..."
-    lxc-attach -n $LEECHERNAME -- /usr/bin/$PYTHONVERSION /mnt/leecher/leecher.py $STARTIP $NUMSEEDERS $RUNDURATION $LATENCYINTERVALS $REPETITIONS $RESULTFILE $STARTINGLATENCY $LEECHLIB
+    lxc-attach -n $LEECHERNAME -- env PYTHONPATH=/root/tribler /usr/bin/$PYTHONVERSION /mnt/leecher/leecher.py $STARTIP $NUMSEEDERS $RUNDURATION $LATENCYINTERVALS $REPETITIONS $RESULTFILE $STARTINGLATENCY $LEECHLIB
     echo "Test is done."
 }
 

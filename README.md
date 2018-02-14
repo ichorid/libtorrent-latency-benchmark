@@ -17,3 +17,6 @@ Run `main.sh` to carry the experiments automatically.
 `main.sh runcache` will run the experiments using the templates prepared by `main.sh prepare`.
 To change the settings (latencies, distro), edit the environment vars in `main.sh` and `containers.sh`
 Resulting plot is written to `result.png` in the working directory.
+
+# Tribler vs Libtorrent
+To select which library to use, set environment var "LEECHLIB" in containers.sh.

@@ -11,9 +11,9 @@ NUMLEECHERS=1
 NUMSEEDERS=1
 FILESIZE=1024
 RUNDURATION=120
-STARTINGLATENCY=0
-LATENCYINTERVAL=50
-NUMINTERVALS=3
+STARTINGLATENCY=100
+LATENCYINTERVAL=0
+NUMINTERVALS=10
 
 FILENAME="test.file"
 TORRENTNAME="test.torrent"
@@ -38,6 +38,8 @@ function tmpdir_prepare {
 	mkdir $LEECHFOLDER
 	echo "Copying template conf"
 	cp template.conf $TMPFOLDER
+    cp get_tribler.sh $TMPFOLDER
+    cp get_libtorrent.sh $TMPFOLDER
 
 	echo "Creating random file of $FILESIZE MiB and torrent for the seeders to seed... This might take a while."
 	dd if=/dev/urandom of=$SEEDFOLDER$FILENAME bs=1M count=$FILESIZE status=progress

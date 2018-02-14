@@ -36,11 +36,13 @@ class LeechSpeedTest(object):
     torrentName = 'test.torrent'
     fileName = "test.file"
 
-    def Leech(self):
+    def TestLantencies(self):
         raise NotImplementedError 
 
-    def MeasureDownloadSpeed(self):
-        self.Leech()
+    def MeasureDownloadSpeeds(self):
+        self.latencies = [self.startingLatency + self.latencyInterval *
+                n for n in range(self.numIntervals)]
+        self.TestLantencies()
         os.system('rm ' + self.downloadFolder + self.fileName)
         return self.bws
 
@@ -77,7 +79,6 @@ def checkNumArgs():
                 'numIntervals'    : int(sys.argv[5]),
                 'startingLatency' : int(sys.argv[7])}
 
-
 def main():
     args = checkNumArgs()
     leechLibrary = sys.argv[8]
@@ -91,7 +92,7 @@ def main():
     #latencies.reverse()
 
     bws = list()
-    bws = LeechLib(args).MeasureDownloadSpeed()
+    bws = LeechLib(args).MeasureDownloadSpeeds()
     WriteSpeedsToCSV(bws, resultName=sys.argv[6])
 
 
