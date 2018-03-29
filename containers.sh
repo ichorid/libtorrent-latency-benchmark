@@ -26,7 +26,7 @@ function container_template_clean {
 
 function container_template_create {
     cp $CONTCONFIG SeederT.conf
-    echo -e "lxc.network.ipv4 = $SUBNET$STARTIP/24" >> SeederT.conf
+    echo -e "lxc.net.0.ipv4.address = $SUBNET$STARTIP/24" >> SeederT.conf
     echo -e "lxc.mount.entry = $(pwd) mnt none bind 0 0" >> SeederT.conf
     lxc-create --template download -n SeederT --config SeederT.conf -- $CONFIGOPTIONS
     lxc-start -n SeederT
